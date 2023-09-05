@@ -1,0 +1,33 @@
+module FourBitAdder (
+    input [3:0] A,
+    input [3:0] B,
+    output [3:0] SUM,
+    output COUT);
+
+    wire [3:0] carry;
+    wire [3:0] sum;
+
+    // First bit
+    FullAdder fa0(.A(A[0]), .B(B[0]), .CIN(1'b0), .SUM(sum[0]), .COUT(carry[0]));
+
+    // Subsequent bits
+    FullAdder fa1(.A(A[1]), .B(B[1]), .CIN(carry[0]), .SUM(sum[1]), .COUT(carry[1]));
+    FullAdder fa2(.A(A[2]), .B(B[2]), .CIN(carry[1]), .SUM(sum[2]), .COUT(carry[2]));
+    FullAdder fa3(.A(A[3]), .B(B[3]), .CIN(carry[2]), .SUM(sum[3]), .COUT(COUT));
+
+    assign SUM = sum;
+
+endmodule
+
+module FullAdder (
+    input A,
+    input B,
+    input CIN,
+    output SUM,
+    output COUT
+);
+
+    assign SUM = A ^ B ^ CIN;
+    assign COUT = (A & B) | (B & CIN) | (CIN & A);
+
+endmodule
