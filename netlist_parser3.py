@@ -193,7 +193,7 @@ def parse_verilog(file_path):
         port_match = re.match(r'\s*(input|output|inout)(\s+\[\d+:\d+\])?\s+(\w+)', line)
         if port_match and current_module:          
             port_type = port_match.group(1)
-            port_width = port_match.group(2) if port_match.group(2) else ''
+            port_width = port_match.group(2).strip() if port_match.group(2) else ''
             port_name = port_match.group(3)
             current_module.ports.append((port_name, port_type, port_width))
             
@@ -253,15 +253,16 @@ def generate_verilog(modules):
             port_type = port[1]
             port_width = port[2]
             port_name = port[0]
-            verilog_code += f"    {port_type} {port_width} {port_name},\n"
+            if port_width:
+                verilog_code += f"  {port_type} {port_width} {port_name},\n"
+            else:
+                verilog_code += f"  {port_type} {port_name},\n"
         verilog_code = verilog_code.rstrip(',\n') + "\n);\n\n"
 
         # Wire declarations
         wire_declarations = {}
         for net in module.nets:
             wire_declarations[net.name] = f"    wire {net.width} {net.name};\n"
-
-        # Adding wire declarations at the beginning of the module
         for net_declaration in wire_declarations.values():
             verilog_code += net_declaration
 
@@ -285,7 +286,7 @@ modules = parse_verilog('netlist.v.txt')
 verilog_code = generate_verilog(modules)
 
 # Storing the generated Verilog code in a .txt file
-with open('generated_verilog.txt', 'w') as f:
+with open('generated_verilog.txt', 'w+') as f:
     f.write(verilog_code)
 
 print("Verilog code has been written to generated_verilog.txt")
