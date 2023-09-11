@@ -73,19 +73,20 @@ def parse_netlist(netlist_file):
             if line.startswith('assign'):
                 continue
             else:
-                cell_type = re.findall(r'(\w+)\s+(\w+)\s*\(', line)[0][0]
-                instance_name = re.findall(r'(\w+)\s+(\w+)\s*\(', line)[0][1]
-                instance = VerilogInstance(instance_name, cell_type)
-                current_module.instances.append(instance)
-                connections = re.findall(r'\.(\w+)\(([^)]+)\)', line)
-                for port, net in connections:
-                    instance.connections[port] = net
+                match = re.match(r'(\w+)\s+(\w+)\s*\(', line)
+                if match:
+                    cell_type, instance_name = match.groups()
+                    instance = VerilogInstance(instance_name, cell_type)
+                    current_module.instances.append(instance)
+                    connections = re.findall(r'\.(\w+)\(([^)]+)\)', line)
+                    for port, net in connections:
+                        instance.connections[port] = net
     return modules
 
 
 
 
-module = parse_netlist('netlist.txt')
+modules = parse_netlist('netlist.txt')
 # # print(module[0].name)
 # # print(module[0].instances[1].name)
 # # print(module[0].instances[0].cell_type)
@@ -100,13 +101,19 @@ module = parse_netlist('netlist.txt')
 #     print('nets : ',i.nets)
 #     print('\n')
 
-for i in module:
-    print(i)
+def print_object_attributes(obj, indent=0):
+    for attr in dir(obj):
+        if not callable(getattr(obj, attr)) and not attr.startswith("__"):
+            value = getattr(obj, attr)
+            print(" " * indent + f"{attr}: {value}")
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, (VerilogModule, VerilogInstance, VerilogNet, VerilogPin)):
+                        print_object_attributes(item, indent + 2)
+            elif isinstance(value, (VerilogModule, VerilogInstance, VerilogNet, VerilogPin)):
+                print_object_attributes(value, indent + 2)
 
-
-
-
-           
-       
-
-
+for i in modules:
+    print_object_attributes(i)
+    # print(dir(i))
+    print('\n')
