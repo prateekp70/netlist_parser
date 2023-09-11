@@ -6,6 +6,8 @@ class VerilogModule:
         self.ports = []
         self.instances = []
         self.nets = []
+        self.assignments = []
+        self.comments = []
 
 class VerilogInstance:
     def __init__(self, name, cell_type):
@@ -14,8 +16,9 @@ class VerilogInstance:
         self.connections = {}
 
 class VerilogNet:
-    def __init__(self, name):
+    def __init__(self, name, width=''):
         self.name = name
+        self.width = width
         self.pins = []
 
 class VerilogPin:
@@ -35,7 +38,10 @@ def parse_verilog(file_path):
 
     for line in lines:
         line = line.strip()
+        
         if line.startswith('//') or not line:
+            if current_module:
+                current_module.comments.append(line)
             continue
 
         # Match module definition
@@ -48,8 +54,9 @@ def parse_verilog(file_path):
         port_match = re.match(r'\s*(input|output|inout)(\s+\[\d+:\d+\])?\s+(\w+)', line)
         if port_match and current_module:          
             port_type = port_match.group(1)
+            port_width = port_match.group(2) if port_match.group(2) else ''
             port_name = port_match.group(3)
-            current_module.ports.append((port_name, port_type))
+            current_module.ports.append((port_name, port_type, port_width))
             
         # Match instance definition
         instance_match = re.match(r'\s*(?!module\b)(\w+)\s+(\w+)\s*\(', line)
@@ -83,40 +90,99 @@ def parse_verilog(file_path):
         # Match Net definition
         net_match = re.match(r'\s*wire\s+(\[.*\])?\s*([\w,]+)\s*;', line)
         if net_match and current_module:
+            net_width = net_match.group(1) if net_match.group(1) else ''
             net_names = net_match.group(2).split(',')
             for net_name in net_names:
                 net_name = net_name.strip()
-                current_net = VerilogNet(net_name)
+                current_net = VerilogNet(net_name, net_width)
                 current_module.nets.append(current_net)
 
-
+        # Match assign statements
+        assign_match = re.match(r'\s*assign\s+(.*);', line)
+        if assign_match and current_module:
+            current_module.assignments.append(assign_match.group(1))
 
     return modules
 
+# def generate_verilog(modules):
+#     verilog_code = ""
+#     for module in modules:
+#         # Module declaration
+#         verilog_code += f"module {module.name} (\n"
+#         for port in module.ports:
+#             port_type = port[1]
+#             port_width = port[2]
+#             port_name = port[0]
+#             verilog_code += f"    {port_type} {port_width} {port_name},\n"
+#         verilog_code = verilog_code.rstrip(',\n') + "\n);\n\n"
+
+#         # Wire declarations
+#         wire_declarations = {}
+#         for net in module.nets:
+#             wire_declarations[net.name] = f"    wire {net.width} {net.name};\n"
+
+#         # Instance declarations
+#         for instance in module.instances:
+#             verilog_code += f"    {instance.cell_type} {instance.name} ("
+#             for port, net in instance.connections.items():
+#                 verilog_code += f".{port}({net}), "
+#             verilog_code = verilog_code.rstrip(', ') + ");\n"
+
+#         # Adding wire declarations at the end of instance declarations
+#         for net_declaration in wire_declarations.values():
+#             verilog_code += net_declaration
+
+#         for assign in module.assignments:
+#             verilog_code += f"    assign {assign};\n"
+
+#         # Adding comments
+#         for comment in module.comments:
+#             verilog_code += f"    {comment}\n"
+
+#         verilog_code += "\nendmodule\n\n"
+
+#     return verilog_code
+
+def generate_verilog(modules):
+    verilog_code = ""
+    for module in modules:
+        # Module declaration
+        verilog_code += f"module {module.name} (\n"
+        for port in module.ports:
+            port_type = port[1]
+            port_width = port[2]
+            port_name = port[0]
+            verilog_code += f"    {port_type} {port_width} {port_name},\n"
+        verilog_code = verilog_code.rstrip(',\n') + "\n);\n\n"
+
+        # Wire declarations
+        wire_declarations = {}
+        for net in module.nets:
+            wire_declarations[net.name] = f"    wire {net.name};\n"
+
+        # Adding wire declarations at the beginning of the module
+        for net_declaration in wire_declarations.values():
+            verilog_code += net_declaration
+
+        # Instance declarations
+        for instance in module.instances:
+            verilog_code += f"    {instance.cell_type} {instance.name} ("
+            for port, net in instance.connections.items():
+                verilog_code += f".{port}({net}), "
+            verilog_code = verilog_code.rstrip(', ') + ");\n"
+
+        for assign in module.assignments:
+            verilog_code += f"    assign {assign};\n"
+
+        # Adding comments
+        for comment in module.comments:
+            verilog_code += f"    {comment}\n"
+
+        verilog_code += "\nendmodule\n\n"
+
+    return verilog_code
+
 # Usage:
 modules = parse_verilog('netlist.v.txt')
-
-for m in modules:
-    print("Module Name :", m.name)
-    
-    print("\nPorts:")
-    for port in m.ports:
-        print(f"  Name: {port[0]}, Type: {port[1]}")
-    
-    print("\nInstances:")
-    for instance in m.instances:
-        print(f"  Instance Name: {instance.name}, Cell Type: {instance.cell_type}")
-        print("  Connections:")
-        for port, net in instance.connections.items():
-            print(f"    Port: {port}, Net: {net}")
-    
-    print("\nNets:")
-    for net in m.nets:
-        print(f"  Net Name: {net.name}")
-        if net.pins:
-            print("  Connected Pins:")
-            for pin in net.pins:
-                print(f"    Instance: {pin.instance.name}, Port: {pin.port}, Net: {pin.net}")
-
-    print("\n" + "="*50 + "\n")  # Separator between modules
-
+verilog_code = generate_verilog(modules)
+print(verilog_code)

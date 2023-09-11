@@ -1,8 +1,0 @@
-module_name = re.findall(r'module\s+(\w+)', line)[0]
-instance_name, cell_type = re.findall(r'(\w+)\s+(\w+)\s*\(', line)[0]
-port_name, net_name = re.findall(r'\.(\w+)\s*\(\s*(\w+)\s*\)', line)[0]
-net_name = re.findall(r'(wire|reg)\s+(.*);', line)[0][1]
-port_name = re.findall(r'(input|output)\s+(.*);', line)[0][1]
-
-
-
