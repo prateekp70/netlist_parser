@@ -1,5 +1,5 @@
 import re
-
+from neo4j import GraphDatabase
 class VerilogModule:
     def __init__(self, name):
         self.name = name
@@ -140,9 +140,71 @@ def generate_verilog(modules):
 
     return verilog_code
 
+def save_to_neo4j(modules):
+    uri = "neo4j+s://1ec1c605.databases.neo4j.io"
+    username = "neo4j"
+    password = "pTjTGJjqSkVDxDc7J11olJ9hF2Ph_IHhwOF6avzbaiY"
+
+    driver = GraphDatabase.driver(uri, auth=(username, password))
+
+    with driver.session() as session:
+        for module in modules:
+            try:
+                session.run("CREATE (m:Module {name: $name}) RETURN m", name=module.name)
+            except Exception as e:
+                print(f"Error creating module: {e}")
+
+            for port in module.ports:
+                try:
+                    session.run("""
+                        MATCH (m:Module {name: $module_name})
+                        CREATE (p:Port {name: $port_name, type: $port_type, width: $port_width})-[:BELONGS_TO]->(m)
+                    """, module_name=module.name, port_name=port[0], port_type=port[1], port_width=port[2])
+                except Exception as e:
+                    print(f"Error creating port: {e}")
+
+            for instance in module.instances:
+                try:
+                    session.run("""
+                        MATCH (m:Module {name: $module_name})
+                        CREATE (i:Instance {name: $instance_name, cell_type: $cell_type})-[:PART_OF]->(m)
+                    """, module_name=module.name, instance_name=instance.name, cell_type=instance.cell_type)
+                except Exception as e:
+                    print(f"Error creating instance: {e}")
+
+                for port_name, net_name in instance.connections.items():
+                    try:
+                        session.run("""
+                            MATCH (i:Instance {name: $instance_name})
+                            CREATE (p:Pin {port: $port_name, net: $net_name})-[:CONNECTED_TO]->(i)
+                        """, instance_name=instance.name, port_name=port_name, net_name=net_name)
+                    except Exception as e:
+                        print(f"Error creating pin: {e}")
+
+            for net in module.nets:
+                try:
+                    session.run("""
+                        MATCH (m:Module {name: $module_name})
+                        CREATE (n:Net {name: $net_name, width: $net_width})-[:PART_OF]->(m)
+                    """, module_name=module.name, net_name=net.name, net_width=net.width)
+                except Exception as e:
+                    print(f"Error creating net: {e}")
+
+            for assign in module.assignments:
+                try:
+                    session.run("""
+                        MATCH (m:Module {name: $module_name})
+                        CREATE (a:Assignment {statement: $assign_statement})-[:PART_OF]->(m)
+                    """, module_name=module.name, assign_statement=assign)
+                except Exception as e:
+                    print(f"Error creating assignment: {e}")
+
+    driver.close()
+
 # Usage:
 modules = parse_verilog('netlist.v.txt')
 verilog_code = generate_verilog(modules)
+save_to_neo4j(modules)
 
 # Storing the generated Verilog code in a .txt file
 with open('generated_verilog.txt', 'w+') as f:
