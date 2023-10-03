@@ -1,0 +1,35 @@
+module FourBitAdder (
+  output COUT,
+  output [3:0] SUM,
+  input [3:0] B,
+  input [3:0] A
+);
+
+    wire [3:0] sum;
+    wire [3:0] carry;
+    FullAdder fa3 (.COUT(COUT), .SUM(SUM), .CIN(carry[2]), .B(B[3]), .A(A[3]));
+    FullAdder fa2 (.COUT(carry[2]), .SUM(sum[2]), .CIN(carry[1]), .B(B[2]), .A(A[2]));
+    FullAdder fa1 (.COUT(carry[1]), .SUM(sum[1]), .CIN(carry[0]), .B(B[1]), .A(A[1]));
+    FullAdder fa0 (.COUT(carry[0]), .SUM(sum[0]), .CIN(1'b0), .B(B[0]), .A(A[0]));
+
+endmodule
+
+module FullAdder (
+  input CIN,
+  output COUT,
+  input B,
+  output SUM,
+  input A
+);
+
+    wire  n2;
+    wire  n8;
+    wire  n1;
+    BUFFSGD3BWP30P140HVT CLK_B3 (.I(CIN), .Z(COUT));
+    BUFFSGD3BWP30P140HVT CLK_B2 (.I(n8), .Z(SUM));
+    XOR2SGD0BWP30P140 G1 (.A1(A), .Z(n2), .A2(n1));
+    XOR2SGD0BWP30P140 G2 (.A1(CIN), .A2(n2), .Z(n8));
+    BUFFSGD3BWP30P140HVT CLK_B1 (.Z(n1), .I(B));
+
+endmodule
+

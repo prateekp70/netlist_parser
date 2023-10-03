@@ -212,4 +212,12 @@ Read the db T0+3
 Write the netlist file multithreaded mode. T0+4
 Query/functions the object + attributes in the DB T0+5
 
+Reading the file:Done (Read in multi-threaded mode:In-progress) 
+Save the objects/attributes in data structure : Done
+Saving into database : Done
+Read the db: In-progress
+Write the netlist file: Done (Write in multi-threaded mode:In-progress) 
+Query/functions the object + attributes in the DB T0+5: _____
 
+
+Port mapping
